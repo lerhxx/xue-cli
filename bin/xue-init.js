@@ -10,26 +10,37 @@ const download = require('../lib/download.js')
 const inquirer = require('../lib/inquirer')
 const generator = require('../lib/generator')
 
-function checkProjectName(projectName) {
-    const list = glob.sync('*')
-    let rootName = path.basename(process.cwd())
-    
-    if (list.length) {
-        const reg = new RegExp(`/${projectName}$`, 'i')
-        const filter = list.filter(name => {
-            const fileName = path.resolve(process.cwd(), path.join('.', name))
-            return reg.test(fileName) && fs.statSync(fileName).isDirectory()
-        })
-        if (filter.length) {
-            console.log(`项目 ${projectName} 已经存在`)
-            return
+async function checkProjectName(projectName) {
+    try {
+        const list = glob.sync('*')
+        let rootName = path.basename(process.cwd())
+        
+        if (list.length) {
+            const reg = new RegExp(`/${projectName}$`, 'i')
+            const filter = list.filter(name => {
+                const fileName = path.resolve(process.cwd(), path.join('.', name))
+                return reg.test(fileName) && fs.statSync(fileName).isDirectory()
+            })
+            if (filter.length) {
+                console.log(`项目 ${projectName} 已经存在`)
+                return
+            }
+            rootName = projectName
+        } else if (rootName === projectName) {
+            const { isInCurrent } = await inquirer.isInCurrent()
+            if (!isInCurrent) {
+                console.log(`项目 ${projectName} 创建失败`)
+                return
+            }
+            rootName = '.'
+        } else {
+            rootName = projectName
         }
-        rootName = projectName
-    } else {
-        rootName = rootName === projectName ? '.' : projectName
+    
+        return rootName
+    } catch(err) {
+        throw err
     }
-
-    return rootName
 }
 
 
@@ -37,8 +48,8 @@ async function go(rootName) {
     const projectRoot = path.resolve(process.cwd(), path.join('.', rootName))
 
     try {
-        const typeAnswers = await inquirer.getProjectType()
-        const target = await download(projectRoot, typeAnswers.projectType.replace(/\s/g, '-'))
+        const { projectType } = await inquirer.chooseProjectType()
+        const target = await download(projectRoot, projectType.replace(/\s/g, '-'))
         const context = {
             name: rootName,
             root: projectRoot,
@@ -51,24 +62,29 @@ async function go(rootName) {
         console.log(logSymbols.success, chalk.green('创建成功\n'))
         console.log(chalk.green(`cd ${context.root} \nyarn install \nyarn dev`))
     } catch(err) {
-        console.log('创建失败', err)
-        rimraf(projectRoot, () => {})
+        throw err
     }
 }
 
-(() => {
-    program.usage('<project-name>').parse(process.argv)
-
-    let projectName = program.args[0]
-
-    if (!projectName) {
-        console.log('请输入项目名称')
-        program.help()
-        return
+(async () => {
+    try {
+        program.parse(process.argv)
+    
+        let projectName = program.args[0]
+    
+        if (!projectName) {
+            console.log('请输入项目名称')
+            program.help()
+            return
+        }
+    
+        const rootName = await checkProjectName(projectName)
+        rootName && await go(rootName)
+    } catch(err) {
+        console.log('创建失败', err)
+        rimraf(projectRoot, () => {})
+        exit(1)
     }
-
-    const rootName = checkProjectName(projectName)
-    rootName && go(rootName)
 })()
 
 process.on('uncatchException', err => {
