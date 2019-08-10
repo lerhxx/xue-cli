@@ -43,9 +43,7 @@ async function checkProjectName(projectName) {
     }
 }
 
-
-async function go(rootName) {
-    const projectRoot = path.resolve(process.cwd(), path.join('.', rootName))
+async function go(rootName, projectRoot) {
 
     try {
         const { projectType } = await inquirer.chooseProjectType()
@@ -69,6 +67,7 @@ async function go(rootName) {
 }
 
 (async () => {
+    let projectRoot = ''
     try {
         program.parse(process.argv)
     
@@ -79,13 +78,13 @@ async function go(rootName) {
             program.help()
             return
         }
-    
+
         const rootName = await checkProjectName(projectName)
-        rootName && await go(rootName)
+        projectRoot = path.resolve(process.cwd(), path.join('.', projectName))
+        rootName && await go(rootName, projectRoot)
     } catch(err) {
         console.log('创建失败', err)
         rimraf(projectRoot, () => {})
-        exit(1)
     }
 })()
 
