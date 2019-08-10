@@ -49,13 +49,15 @@ async function go(rootName) {
 
     try {
         const { projectType } = await inquirer.chooseProjectType()
-        const target = await download(projectRoot, projectType.replace(/\s/g, '-'))
+        const formatProjectType = projectType.replace(/\s/g, '-')
+        const target = await download(projectRoot, formatProjectType)
         const context = {
             name: rootName,
             root: projectRoot,
             temp: target
         }
-        const infoAnswers = await inquirer.getProjectInfo(context)
+        const getPorjectInfo = inquirer.projectInfo[formatProjectType] ? inquirer.projectInfo[formatProjectType] : inquirer.projectInfo['default']
+        const infoAnswers = await getPorjectInfo(context)
         context.metadata = { ...infoAnswers }
 
         await generator(context.temp, context.metadata, context.root)
