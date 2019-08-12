@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/local/bin/env node
 const program = require('commander')
 const path = require('path')
 const fs = require('fs')
