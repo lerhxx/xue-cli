@@ -5,11 +5,11 @@
 ###安装依赖
 
 ```
-yarn install
+yarn install hxue-cli
 ```
 
 ###新建项目
 
 ```
-node ./bin/xue.js init {{projectName}}
+xue init ${projectName}
 ```
